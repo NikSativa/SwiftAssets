@@ -1,0 +1,94 @@
+// Generated using SwiftGen, by O.Halligon — https://github.com/SwiftGen/SwiftGen
+// swiftlint:disable superfluous_disable_command file_length identifier_name line_length nesting type_body_length type_name
+{% if tables.count > 0 %}
+{# empty line #}
+{% set showTranslation %}{{param.showTranslation|default:true}}{% endset %}
+{% set accessModifier %}{% if param.publicAccess %}public{% else %}internal{% endif %}{% endset %}
+{% set indentSpace %}{{param.indentSpace|default:"    "}}{% endset %}
+{% set indentSpace2 %}{{indentSpace}}{{indentSpace}}{% endset %}
+{% set indentSpace3 %}{{indentSpace2}}{{indentSpace}}{% endset %}
+{% set indentSpace4 %}{{indentSpace2}}{{indentSpace}}{% endset %}
+
+import Foundation
+import UIKit
+import Quick
+import Nimble
+import NSpry
+import NSpry_Nimble
+
+@testable import JetSmarter7
+
+{% macro parametersBlock types %}{% filter removeNewlines:"leading" %}
+{% for type in types %}
+{% if type == "String" %}"p{{forloop.counter}}"{% elif type == "Int" %}{{forloop.counter}}{% else %}unknown{% endif %}{% if not forloop.last %}, {% endif %}
+{% endfor %}
+{% endfilter %}{% endmacro %}
+{# #}
+{% macro recursiveBlock table path item sp %}
+{% for string in item.strings %}
+{% if string.types %}
+{{sp}}it("{{ string.key }}") {
+{% set args %}{% call parametersBlock string.types %}{% endset %}
+{{sp}}{{indentSpace}}let actual = String{{path}}.{{string.name|swiftIdentifier:"pretty"|lowerFirstWord|escapeReservedKeywords}}({{args}}){% if showTranslation %} // {{ string.translation }} {% endif %}
+{{sp}}{{indentSpace}}let expected = "{{ string.key }}".testMake(tableName: "{{ table }}", args: {{args}})
+{{sp}}{{indentSpace}}expect(actual) == expected
+{{sp}}{{indentSpace}}expect(actual.isEmpty) == false
+{{sp}}{{indentSpace}}expect(actual) != "{{ string.key }}"
+{{sp}}}
+{% else %}
+{{sp}}it("{{ string.key }}") {
+{{sp}}{{indentSpace}}let actual = String{{path}}.{{string.name|swiftIdentifier:"pretty"|lowerFirstWord|escapeReservedKeywords}}{% if showTranslation %} // {{ string.translation }} {% endif %}
+{{sp}}{{indentSpace}}let expected = "{{ string.key }}".testMake(tableName: "{{ table }}")
+{{sp}}{{indentSpace}}expect(actual) == expected
+{{sp}}{{indentSpace}}expect(actual.isEmpty) == false
+{{sp}}{{indentSpace}}expect(actual) != "{{ string.key }}"
+{{sp}}}
+{% endif %}
+{% ifnot forloop.last %}
+
+{% endif %}
+{% endfor %}
+{% for child in item.children %}
+{% ifnot forloop.first %}
+
+{% endif %}
+{{sp}}describe("{{child.name|swiftIdentifier:"pretty"|escapeReservedKeywords}}") {
+{% set sp2 %}{{sp}}{{indentSpace}}{% endset %}
+{% set newPath %}{{path}}.{{child.name|swiftIdentifier:"pretty"|escapeReservedKeywords}}{% endset %}
+{% call recursiveBlock table newPath child sp2 %}
+{{sp}}}
+{% endfor %}
+{% endmacro %}
+{# #}
+final class L10nSpec: QuickSpec {
+    override func spec() {
+        describe("AssetsSpec") {
+{% if tables.count > 1 %}
+{% for table in tables %}
+{{indentSpace3}}describe("{{table.name|swiftIdentifier:"pretty"|escapeReservedKeywords}}") {
+{% call recursiveBlock table.name table.name table.levels indentSpace4 %}
+{{indentSpace3}}}
+{% endfor %}
+{% else %}
+{% call recursiveBlock tables.first.name table.name tables.first.levels indentSpace3 %}
+{% endif %}
+        }
+    }
+}
+
+private extension String {
+    func testMake(tableName: String? = nil, args: CVarArg...) -> String {
+        let languageCode = "en"
+        let bundle = Bundle.main
+
+        if let path = bundle.path(forResource: languageCode, ofType: "lproj"),
+           let bundle = Bundle(path: path) {
+            let originalText = bundle.localizedString(forKey: self, value: nil, table: nil)
+            return String(format: originalText, arguments: args)
+        }
+        return self
+    }
+}
+{% else %}
+// No string found
+{% endif %}
